@@ -1,0 +1,775 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FCO Tactics – Phân tích chiến thuật FC Online</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;600;700&family=Inter:wght@300;400;500;600&display=swap');
+
+:root {
+  --bg: #0d1117;
+  --surface: #161b22;
+  --surface2: #21262d;
+  --surface3: #30363d;
+  --accent: #00e676;
+  --accent-dim: rgba(0,230,118,0.12);
+  --barca-blue: #004d98;
+  --barca-red: #a50044;
+  --text: #e6edf3;
+  --text-muted: #7d8590;
+  --border: rgba(48,54,61,0.8);
+  --border-accent: rgba(0,230,118,0.2);
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: 'Inter', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; overflow-x: hidden; }
+
+/* ── HEADER ── */
+header {
+  display: flex; align-items: center; gap: 16px;
+  padding: 12px 20px; background: var(--surface);
+  border-bottom: 1px solid var(--border); position: sticky; top: 0; z-index: 200;
+}
+.logo { font-family: 'Rajdhani', sans-serif; font-size: 20px; font-weight: 700; letter-spacing: 2px; color: var(--accent); flex-shrink: 0; }
+.logo span { color: var(--text); }
+
+.formation-select {
+  background: var(--surface2); border: 1px solid var(--border); color: var(--text);
+  padding: 6px 10px; border-radius: 6px; font-size: 12px; font-family: 'Inter', sans-serif; cursor: pointer; outline: none;
+}
+.hdr-btn {
+  background: var(--surface2); border: 1px solid var(--border); color: var(--text-muted);
+  padding: 6px 12px; border-radius: 6px; cursor: pointer; font-size: 12px; transition: all 0.2s; white-space: nowrap;
+}
+.hdr-btn:hover { border-color: var(--accent); color: var(--accent); }
+.hdr-btn.primary { background: var(--accent); color: #000; border-color: var(--accent); font-weight: 600; }
+.hdr-btn.primary:hover { opacity: 0.88; }
+
+.chem-pill {
+  display: flex; align-items: center; gap: 6px; margin-left: auto;
+  background: var(--accent-dim); border: 1px solid var(--border-accent);
+  padding: 5px 12px; border-radius: 20px;
+}
+.chem-pill span:first-child { font-size: 11px; color: var(--text-muted); }
+.chem-pill span:last-child { font-family: 'Rajdhani', sans-serif; font-size: 17px; font-weight: 700; color: var(--accent); }
+
+/* ── LAYOUT ── */
+.app { display: grid; grid-template-columns: 300px 1fr 300px; height: calc(100vh - 49px); }
+
+/* ── LEFT SIDEBAR: Search ── */
+.sidebar-left { background: var(--surface); border-right: 1px solid var(--border); display: flex; flex-direction: column; overflow: hidden; }
+
+.search-wrap { padding: 12px; border-bottom: 1px solid var(--border); }
+.search-row { display: flex; gap: 6px; }
+.search-input {
+  flex: 1; background: var(--surface2); border: 1px solid var(--border); color: var(--text);
+  padding: 9px 12px; border-radius: 8px; font-size: 13px; font-family: 'Inter', sans-serif;
+  outline: none; transition: border-color 0.2s;
+}
+.search-input:focus { border-color: var(--accent); }
+.search-input::placeholder { color: var(--text-muted); }
+.search-btn {
+  background: var(--accent); border: none; color: #000; padding: 9px 14px;
+  border-radius: 8px; cursor: pointer; font-weight: 700; font-size: 13px; transition: opacity 0.2s; white-space: nowrap;
+}
+.search-btn:hover { opacity: 0.85; }
+
+/* Filter chips */
+.filter-row { display: flex; gap: 4px; margin-top: 8px; flex-wrap: wrap; }
+.chip {
+  background: var(--surface2); border: 1px solid var(--border); color: var(--text-muted);
+  padding: 3px 8px; border-radius: 12px; font-size: 10px; cursor: pointer; transition: all 0.15s;
+}
+.chip:hover, .chip.active { background: var(--accent-dim); border-color: var(--border-accent); color: var(--accent); }
+
+.player-list { flex: 1; overflow-y: auto; }
+.player-list::-webkit-scrollbar { width: 3px; }
+.player-list::-webkit-scrollbar-thumb { background: var(--surface3); border-radius: 2px; }
+
+/* Player result card */
+.pcard {
+  display: flex; align-items: center; gap: 10px; padding: 10px 12px;
+  border-bottom: 1px solid var(--border); cursor: pointer; transition: background 0.15s; user-select: none;
+}
+.pcard:hover { background: var(--surface2); }
+.pcard.dragging { opacity: 0.4; }
+
+.pcard-img {
+  width: 46px; height: 46px; border-radius: 50%; flex-shrink: 0; overflow: hidden;
+  background: linear-gradient(135deg, var(--barca-blue), var(--barca-red));
+  display: flex; align-items: center; justify-content: center;
+  font-family: 'Rajdhani', sans-serif; font-weight: 700; font-size: 14px; color: #fff;
+  border: 1px solid rgba(255,255,255,0.1);
+}
+.pcard-img img { width: 115%; height: 115%; object-fit: cover; object-position: top center; margin-top: 4px; }
+
+.pcard-info { flex: 1; min-width: 0; }
+.pcard-name { font-size: 13px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.pcard-meta { display: flex; align-items: center; gap: 5px; margin-top: 3px; flex-wrap: wrap; }
+.badge {
+  display: inline-block; padding: 1px 6px; border-radius: 4px; font-size: 10px; font-weight: 700;
+  background: var(--accent-dim); border: 1px solid var(--border-accent); color: var(--accent);
+}
+.pcard-sub { font-size: 11px; color: var(--text-muted); }
+
+.pcard-ovr { font-family: 'Rajdhani', sans-serif; font-size: 22px; font-weight: 700; color: var(--accent); flex-shrink: 0; line-height: 1; }
+
+/* hint text */
+.hint { font-size: 10px; color: var(--text-muted); padding: 8px 12px; line-height: 1.5; border-bottom: 1px solid var(--border); }
+
+/* Empty / loading */
+.empty { padding: 40px 16px; text-align: center; color: var(--text-muted); font-size: 12px; line-height: 1.8; }
+.empty .ic { font-size: 36px; margin-bottom: 10px; }
+.spinner { display: inline-block; width: 18px; height: 18px; border: 2px solid rgba(0,230,118,0.2); border-top-color: var(--accent); border-radius: 50%; animation: spin 0.7s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* ── PITCH ── */
+.pitch-col { display: flex; flex-direction: column; background: var(--bg); overflow: hidden; }
+.pitch-wrap { flex: 1; display: flex; align-items: center; justify-content: center; padding: 12px; }
+
+.pitch {
+  position: relative; width: 420px; height: 588px;
+  background: repeating-linear-gradient(180deg, #1e5c14 0px, #1e5c14 24.5px, #227016 24.5px, #227016 49px);
+  border-radius: 6px; border: 2px solid rgba(255,255,255,0.15); overflow: hidden; flex-shrink: 0;
+}
+.pitch-svg { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; }
+
+/* Slot */
+.slot { position: absolute; transform: translate(-50%,-50%); display: flex; flex-direction: column; align-items: center; cursor: pointer; z-index: 10; transition: transform 0.15s; }
+.slot:hover { transform: translate(-50%,-50%) scale(1.06); }
+.slot.selected .slot-ring { border-color: var(--accent) !important; box-shadow: 0 0 0 3px rgba(0,230,118,0.3), 0 4px 16px rgba(0,0,0,0.6) !important; }
+
+.slot-ring {
+  width: 50px; height: 50px; border-radius: 50%; overflow: hidden; position: relative;
+  background: linear-gradient(145deg, var(--barca-blue), var(--barca-red));
+  border: 2.5px solid rgba(255,255,255,0.65);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.55); transition: border-color 0.2s;
+  display: flex; align-items: center; justify-content: center;
+}
+.slot-ring.empty { background: rgba(255,255,255,0.05); border: 2px dashed rgba(255,255,255,0.25); }
+.slot-ring.drag-over { border-color: var(--accent) !important; box-shadow: 0 0 20px rgba(0,230,118,0.6) !important; }
+.slot-ring img { width: 115%; height: 115%; object-fit: cover; object-position: top center; margin-top: 5px; position: absolute; top: 0; left: -7.5%; }
+.slot-ring .slot-init { font-family: 'Rajdhani', sans-serif; font-size: 12px; font-weight: 700; color: #fff; z-index: 1; }
+.slot-ring .slot-plus { font-size: 22px; color: rgba(255,255,255,0.3); }
+
+.slot-ovr {
+  position: absolute; top: -6px; right: -7px;
+  background: var(--accent); color: #000; font-family: 'Rajdhani', sans-serif;
+  font-size: 10px; font-weight: 700; padding: 1px 4px; border-radius: 4px; z-index: 2; line-height: 1.5;
+}
+
+.slot-label { text-align: center; margin-top: 3px; }
+.slot-sname { font-size: 9px; color: rgba(255,255,255,0.9); font-weight: 600; white-space: nowrap; max-width: 62px; overflow: hidden; text-overflow: ellipsis; background: rgba(0,0,0,0.55); padding: 1px 5px; border-radius: 3px; }
+.slot-pos { font-size: 9px; color: var(--accent); font-weight: 700; margin-top: 1px; }
+
+/* ── RIGHT SIDEBAR ── */
+.sidebar-right { background: var(--surface); border-left: 1px solid var(--border); display: flex; flex-direction: column; overflow: hidden; }
+
+.rtabs { display: flex; border-bottom: 1px solid var(--border); }
+.rtab { flex: 1; padding: 11px 4px; text-align: center; font-size: 11px; font-weight: 600; cursor: pointer; color: var(--text-muted); border-bottom: 2px solid transparent; transition: all 0.2s; }
+.rtab.active { color: var(--accent); border-bottom-color: var(--accent); }
+
+.rpanel { flex: 1; overflow-y: auto; padding: 14px; }
+.rpanel::-webkit-scrollbar { width: 3px; }
+.rpanel::-webkit-scrollbar-thumb { background: var(--surface3); }
+
+/* Player detail */
+.detail-card { background: var(--surface2); border: 1px solid var(--border); border-radius: 8px; padding: 12px; margin-bottom: 12px; }
+.detail-head { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; }
+.detail-avatar { width: 56px; height: 56px; border-radius: 50%; overflow: hidden; background: linear-gradient(145deg, var(--barca-blue), var(--barca-red)); display: flex; align-items: center; justify-content: center; font-family: 'Rajdhani', sans-serif; font-weight: 700; font-size: 16px; color: #fff; flex-shrink: 0; }
+.detail-avatar img { width: 115%; height: 115%; object-fit: cover; object-position: top center; margin-top: 5px; }
+.detail-name { font-family: 'Rajdhani', sans-serif; font-size: 19px; font-weight: 700; line-height: 1.1; }
+.detail-sub { font-size: 11px; color: var(--text-muted); margin-top: 3px; }
+.remove-btn { margin-left: auto; background: rgba(248,81,73,0.1); border: 1px solid rgba(248,81,73,0.3); color: #f85149; padding: 4px 8px; border-radius: 5px; cursor: pointer; font-size: 11px; flex-shrink: 0; }
+
+/* Stat bars */
+.stat-row { margin-bottom: 9px; }
+.stat-head { display: flex; justify-content: space-between; font-size: 11px; margin-bottom: 4px; }
+.stat-head span:first-child { color: var(--text-muted); }
+.stat-head span:last-child { color: var(--text); font-weight: 600; }
+.stat-bar { height: 4px; background: var(--surface3); border-radius: 2px; overflow: hidden; }
+.stat-fill { height: 100%; background: linear-gradient(90deg, var(--barca-blue), var(--accent)); border-radius: 2px; transition: width 0.5s ease; }
+
+/* Section title */
+.sec { font-size: 10px; font-weight: 700; letter-spacing: 1.5px; color: var(--text-muted); text-transform: uppercase; margin: 12px 0 7px; padding-bottom: 5px; border-bottom: 1px solid var(--border); }
+
+/* Tags */
+.tag { display: inline-block; padding: 2px 8px; border-radius: 12px; font-size: 10px; font-weight: 600; margin: 2px; }
+.tag.g { background: rgba(0,230,118,0.1); color: var(--accent); border: 1px solid rgba(0,230,118,0.25); }
+.tag.r { background: rgba(248,81,73,0.1); color: #f85149; border: 1px solid rgba(248,81,73,0.25); }
+.tag.y { background: rgba(255,193,7,0.1); color: #ffc107; border: 1px solid rgba(255,193,7,0.25); }
+
+/* Chemistry */
+.chem-big { text-align: center; padding: 20px 0 12px; }
+.chem-n { font-family: 'Rajdhani', sans-serif; font-size: 60px; font-weight: 700; color: var(--accent); line-height: 1; }
+.chem-lbl { font-size: 11px; color: var(--text-muted); letter-spacing: 1.5px; text-transform: uppercase; margin-top: 4px; }
+.chem-bar2 { height: 6px; background: var(--surface2); border-radius: 3px; margin: 10px 0; overflow: hidden; }
+.chem-fill2 { height: 100%; background: linear-gradient(90deg, #f85149, #ffc107, var(--accent)); border-radius: 3px; transition: width 0.5s; }
+
+/* AI box */
+.ai-box { background: var(--surface2); border: 1px solid var(--border); border-radius: 8px; padding: 12px; margin-bottom: 10px; }
+.ai-box h4 { font-family: 'Rajdhani', sans-serif; font-size: 12px; font-weight: 700; color: var(--accent); letter-spacing: 1px; text-transform: uppercase; margin-bottom: 8px; display: flex; align-items: center; gap: 5px; }
+.ai-box p { font-size: 12px; line-height: 1.7; color: #8b949e; }
+.ai-box ul { list-style: none; }
+.ai-box ul li::before { content: '• '; color: var(--accent); }
+.ai-box ul li { font-size: 12px; line-height: 1.7; color: #8b949e; }
+
+/* Toast */
+.toast { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%) translateY(70px); background: var(--accent); color: #000; padding: 9px 18px; border-radius: 8px; font-weight: 600; font-size: 12px; z-index: 999; transition: transform 0.28s ease; pointer-events: none; }
+.toast.show { transform: translateX(-50%) translateY(0); }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">FCO<span>Tactics</span></div>
+  <span style="font-size:11px;color:var(--text-muted)">Sơ đồ:</span>
+  <select class="formation-select" id="formSel" onchange="changeFormation()">
+    <option value="4-2-4">4-2-4</option>
+    <option value="4-3-3">4-3-3</option>
+    <option value="4-2-3-1">4-2-3-1</option>
+    <option value="4-4-2">4-4-2</option>
+    <option value="4-1-2-3">4-1-2-3</option>
+    <option value="3-4-3">3-4-3</option>
+  </select>
+  <button class="hdr-btn" onclick="clearPitch()">🗑 Xóa sân</button>
+  <button class="hdr-btn" onclick="analyzeAI()">🤖 AI Phân tích</button>
+  <button class="hdr-btn primary" onclick="shareTeam()">🔗 Chia sẻ</button>
+  <div class="chem-pill"><span>Chemistry</span><span id="chemVal">300/300</span></div>
+</header>
+
+<div class="app">
+  <!-- LEFT -->
+  <div class="sidebar-left">
+    <div class="search-wrap">
+      <div class="search-row">
+        <input class="search-input" id="searchQ" type="text" placeholder="Tìm cầu thủ (vd: Messi, Pedri...)" onkeydown="if(event.key==='Enter')doSearch()">
+        <button class="search-btn" onclick="doSearch()">Tìm</button>
+      </div>
+      <div class="filter-row" id="filterRow">
+        <span class="chip active" data-pos="">Tất cả</span>
+        <span class="chip" data-pos="ST">ST</span>
+        <span class="chip" data-pos="CF">CF</span>
+        <span class="chip" data-pos="CAM">CAM</span>
+        <span class="chip" data-pos="CM">CM</span>
+        <span class="chip" data-pos="LW">LW</span>
+        <span class="chip" data-pos="RW">RW</span>
+        <span class="chip" data-pos="CB">CB</span>
+        <span class="chip" data-pos="LB">LB</span>
+        <span class="chip" data-pos="RB">RB</span>
+        <span class="chip" data-pos="GK">GK</span>
+      </div>
+    </div>
+    <div class="hint" id="hintText">👆 Click ô trống trên sân → tìm cầu thủ → click để thêm vào. Hoặc kéo thả!</div>
+    <div class="player-list" id="playerList">
+      <div class="empty"><div class="ic">⚽</div>Tìm cầu thủ để bắt đầu<br><small style="font-size:10px;margin-top:6px;display:block">Dữ liệu từ fifaaddict.com</small></div>
+    </div>
+  </div>
+
+  <!-- PITCH -->
+  <div class="pitch-col">
+    <div class="pitch-wrap">
+      <div class="pitch" id="pitch">
+        <svg class="pitch-svg" viewBox="0 0 420 588">
+          <rect x="16" y="8" width="388" height="572" fill="none" stroke="rgba(255,255,255,0.35)" stroke-width="1.5"/>
+          <line x1="16" y1="294" x2="404" y2="294" stroke="rgba(255,255,255,0.35)" stroke-width="1.5"/>
+          <circle cx="210" cy="294" r="52" fill="none" stroke="rgba(255,255,255,0.35)" stroke-width="1.5"/>
+          <circle cx="210" cy="294" r="3" fill="rgba(255,255,255,0.5)"/>
+          <rect x="88" y="8" width="244" height="84" fill="none" stroke="rgba(255,255,255,0.35)" stroke-width="1.5"/>
+          <rect x="146" y="8" width="128" height="42" fill="none" stroke="rgba(255,255,255,0.35)" stroke-width="1.5"/>
+          <rect x="88" y="496" width="244" height="84" fill="none" stroke="rgba(255,255,255,0.35)" stroke-width="1.5"/>
+          <rect x="146" y="546" width="128" height="42" fill="none" stroke="rgba(255,255,255,0.35)" stroke-width="1.5"/>
+          <rect x="166" y="2" width="88" height="8" fill="none" stroke="rgba(255,255,255,0.4)" stroke-width="1.5"/>
+          <rect x="166" y="578" width="88" height="8" fill="none" stroke="rgba(255,255,255,0.4)" stroke-width="1.5"/>
+          <circle cx="210" cy="72" r="3" fill="rgba(255,255,255,0.5)"/>
+          <circle cx="210" cy="516" r="3" fill="rgba(255,255,255,0.5)"/>
+        </svg>
+      </div>
+    </div>
+  </div>
+
+  <!-- RIGHT -->
+  <div class="sidebar-right">
+    <div class="rtabs">
+      <div class="rtab active" onclick="rTab('detail')">👤 Cầu thủ</div>
+      <div class="rtab" onclick="rTab('chem')">⚡ Chem</div>
+      <div class="rtab" onclick="rTab('ai')">🤖 AI</div>
+    </div>
+    <div class="rpanel" id="rpanel">
+      <div class="empty"><div class="ic">👆</div>Click cầu thủ trên sân để xem chi tiết</div>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ─────────────────────────────────────────────
+// CONFIG
+// Khi deploy lên Vercel, PROXY_BASE tự động đúng
+// Khi test local: chạy `vercel dev` thì cũng đúng
+// ─────────────────────────────────────────────
+const PROXY_BASE = '/api/search';
+const IMG_BASE   = 'https://s1.fifaaddict.com/fo4/players/';
+const IMG_SFX    = '.png?20260720';
+
+function imgUrl(imgId) {
+  return imgId ? `${IMG_BASE}${imgId}${IMG_SFX}` : null;
+}
+
+// ─────────────────────────────────────────────
+// FORMATIONS
+// ─────────────────────────────────────────────
+const FORMATIONS = {
+  '4-2-4':[
+    {pos:'GK',x:50,y:91},
+    {pos:'LB',x:13,y:76},{pos:'CB',x:33,y:78},{pos:'CB',x:67,y:78},{pos:'RB',x:87,y:76},
+    {pos:'CM',x:32,y:56},{pos:'CM',x:68,y:56},
+    {pos:'LW',x:10,y:32},{pos:'CF',x:36,y:25},{pos:'ST',x:64,y:25},{pos:'RW',x:90,y:32}
+  ],
+  '4-3-3':[
+    {pos:'GK',x:50,y:91},
+    {pos:'LB',x:13,y:76},{pos:'CB',x:33,y:78},{pos:'CB',x:67,y:78},{pos:'RB',x:87,y:76},
+    {pos:'CM',x:21,y:53},{pos:'CM',x:50,y:50},{pos:'CM',x:79,y:53},
+    {pos:'LW',x:15,y:26},{pos:'ST',x:50,y:20},{pos:'RW',x:85,y:26}
+  ],
+  '4-2-3-1':[
+    {pos:'GK',x:50,y:91},
+    {pos:'LB',x:13,y:76},{pos:'CB',x:33,y:78},{pos:'CB',x:67,y:78},{pos:'RB',x:87,y:76},
+    {pos:'CDM',x:33,y:62},{pos:'CDM',x:67,y:62},
+    {pos:'LAM',x:15,y:41},{pos:'CAM',x:50,y:39},{pos:'RAM',x:85,y:41},
+    {pos:'ST',x:50,y:20}
+  ],
+  '4-4-2':[
+    {pos:'GK',x:50,y:91},
+    {pos:'LB',x:13,y:76},{pos:'CB',x:33,y:78},{pos:'CB',x:67,y:78},{pos:'RB',x:87,y:76},
+    {pos:'LM',x:10,y:54},{pos:'CM',x:33,y:57},{pos:'CM',x:67,y:57},{pos:'RM',x:90,y:54},
+    {pos:'ST',x:33,y:23},{pos:'ST',x:67,y:23}
+  ],
+  '4-1-2-3':[
+    {pos:'GK',x:50,y:91},
+    {pos:'LB',x:13,y:76},{pos:'CB',x:33,y:78},{pos:'CB',x:67,y:78},{pos:'RB',x:87,y:76},
+    {pos:'CDM',x:50,y:64},
+    {pos:'LM',x:21,y:49},{pos:'RM',x:79,y:49},
+    {pos:'LW',x:15,y:26},{pos:'ST',x:50,y:20},{pos:'RW',x:85,y:26}
+  ],
+  '3-4-3':[
+    {pos:'GK',x:50,y:91},
+    {pos:'CB',x:23,y:77},{pos:'CB',x:50,y:79},{pos:'CB',x:77,y:77},
+    {pos:'LM',x:10,y:56},{pos:'CM',x:33,y:58},{pos:'CM',x:67,y:58},{pos:'RM',x:90,y:56},
+    {pos:'LW',x:15,y:26},{pos:'ST',x:50,y:20},{pos:'RW',x:85,y:26}
+  ]
+};
+
+// Default lineup from user's Barca team
+const DEFAULT = {
+  0:{name:'Joan García',pos:'GK',ovr:135,season:'25TS',imgId:'njbnzraad'},
+  1:{name:'Jordi Alba',pos:'LB',ovr:124,season:'LH',imgId:'padjordiallba'},
+  2:{name:'Pau Cubarsí',pos:'LCB',ovr:135,season:'25TS',imgId:'njbpzzdgr'},
+  3:{name:'C. Puyol',pos:'RCB',ovr:137,season:'MDL',imgId:'padpuyolc'},
+  4:{name:'João Cancelo',pos:'RWB',ovr:138,season:'CU',imgId:'njbnlkdmk'},
+  5:{name:'F. de Jong',pos:'LCM',ovr:140,season:'26TY',imgId:'njbobqrqg'},
+  6:{name:'Pedri',pos:'RCM',ovr:140,season:'MDL',imgId:'padpedri'},
+  7:{name:'Raphinha',pos:'LW',ovr:140,season:'26TY',imgId:'njbobzvrg'},
+  8:{name:'L. Messi',pos:'CF',ovr:140,season:'WS',imgId:'padmessil'},
+  9:{name:'Lamine Yamal',pos:'RW',ovr:140,season:'25',imgId:'njbnqzgal'},
+  10:{name:'L. Suárez',pos:'ST',ovr:139,season:'WS',imgId:'padsuarezl'}
+};
+
+// ─────────────────────────────────────────────
+// STATE
+// ─────────────────────────────────────────────
+let formation = '4-2-4';
+let players = {};       // slotIndex → player object
+let selectedSlot = null;
+let draggedPlayer = null;
+let allResults = [];    // full search results
+let posFilter = '';
+let currentTab = 'detail';
+
+// ─────────────────────────────────────────────
+// INIT
+// ─────────────────────────────────────────────
+window.onload = () => {
+  // Load từ URL share hoặc localStorage
+  const p = new URLSearchParams(location.search).get('t');
+  if (p) {
+    try { const d = JSON.parse(decodeURIComponent(atob(p))); formation = d.f; players = d.p; document.getElementById('formSel').value = formation; } catch(e) {}
+  } else {
+    const saved = localStorage.getItem('fco3');
+    if (saved) try { const d = JSON.parse(saved); formation = d.f; players = d.p; document.getElementById('formSel').value = formation; } catch(e) {}
+    else players = JSON.parse(JSON.stringify(DEFAULT));
+  }
+  renderPitch();
+
+  // Filter chips
+  document.getElementById('filterRow').addEventListener('click', e => {
+    const chip = e.target.closest('.chip');
+    if (!chip) return;
+    posFilter = chip.dataset.pos;
+    document.querySelectorAll('.chip').forEach(c => c.classList.toggle('active', c === chip));
+    renderResults();
+  });
+};
+
+// ─────────────────────────────────────────────
+// PITCH RENDER
+// ─────────────────────────────────────────────
+function renderPitch() {
+  const pitch = document.getElementById('pitch');
+  pitch.querySelectorAll('.slot').forEach(e => e.remove());
+
+  FORMATIONS[formation].forEach((slot, i) => {
+    const el = document.createElement('div');
+    el.className = 'slot';
+    el.style.left = slot.x + '%';
+    el.style.top  = slot.y + '%';
+    if (selectedSlot === i) el.classList.add('selected');
+
+    const p = players[i];
+    const init = p ? p.name.split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase() : '';
+    const url  = p && p.imgId ? imgUrl(p.imgId) : null;
+
+    el.innerHTML = p ? `
+      <div class="slot-ring">
+        ${url ? `<img src="${url}" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'" alt="${p.name}"><span class="slot-init" style="display:none">${init}</span>` : `<span class="slot-init">${init}</span>`}
+        <div class="slot-ovr">${p.ovr}</div>
+      </div>
+      <div class="slot-label">
+        <div class="slot-sname">${p.name.split(' ').pop()}</div>
+        <div class="slot-pos">${p.pos||slot.pos}</div>
+      </div>` : `
+      <div class="slot-ring empty"><span class="slot-plus">+</span></div>
+      <div class="slot-label"><div class="slot-pos">${slot.pos}</div></div>`;
+
+    el.onclick = () => {
+      selectedSlot = i;
+      renderPitch();
+      if (players[i]) showDetail(i);
+      else { showToast(`Chọn ô ${slot.pos} — tìm cầu thủ bên trái để thêm`); document.getElementById('hintText').textContent = `✅ Đã chọn ô ${slot.pos} — click cầu thủ bên trái để thêm vào`; }
+    };
+
+    const ring = () => el.querySelector('.slot-ring');
+    el.ondragover  = e => { e.preventDefault(); ring().classList.add('drag-over'); };
+    el.ondragleave = () => ring().classList.remove('drag-over');
+    el.ondrop = e => {
+      e.preventDefault(); ring().classList.remove('drag-over');
+      if (draggedPlayer) { players[i] = {...draggedPlayer}; draggedPlayer = null; renderPitch(); showDetail(i); updateChem(); showToast(`✅ ${players[i].name} vào sân!`); }
+    };
+
+    pitch.appendChild(el);
+  });
+  updateChem();
+}
+
+// ─────────────────────────────────────────────
+// SEARCH – gọi qua proxy /api/search
+// ─────────────────────────────────────────────
+async function doSearch() {
+  const q = document.getElementById('searchQ').value.trim();
+  if (!q) return;
+
+  const list = document.getElementById('playerList');
+  list.innerHTML = `<div class="empty"><div class="spinner"></div><div style="margin-top:10px;font-size:11px">Đang tìm "${q}"...</div></div>`;
+  allResults = [];
+
+  try {
+    // Gọi proxy để bypass CORS
+    const res = await fetch(`${PROXY_BASE}?q=${encodeURIComponent(q)}`);
+    const data = await res.json();
+
+    // fifaaddict trả về dạng array hoặc object tùy endpoint
+    let items = [];
+    if (Array.isArray(data)) items = data;
+    else if (data.players) items = data.players;
+    else if (data.results) items = data.results;
+    else if (data.data) items = data.data;
+    else if (data.raw) {
+      // HTML trả về — parse player IDs từ HTML
+      items = parseHtmlResults(data.html);
+    }
+
+    allResults = items;
+    renderResults();
+  } catch(e) {
+    // Fallback: dùng AI nếu proxy chưa deploy
+    await searchViaAI(q);
+  }
+}
+
+// Parse player data từ HTML fifaaddict (fallback)
+function parseHtmlResults(html) {
+  const parser = new DOMParser();
+  const doc = parser.parseFromString(html, 'text/html');
+  const items = [];
+  // Tìm các link player
+  doc.querySelectorAll('a[href*="/fo4db/pid"]').forEach(a => {
+    const href = a.href;
+    const pidMatch = href.match(/\/fo4db\/(pid[a-z0-9]+)/);
+    if (!pidMatch) return;
+    const pid = pidMatch[1];
+    const imgEl = a.querySelector('img');
+    const imgSrc = imgEl ? imgEl.src : '';
+    const imgIdMatch = imgSrc.match(/players\/([a-z0-9]+)\.png/);
+    const imgId = imgIdMatch ? imgIdMatch[1] : '';
+    const nameEl = a.querySelector('.player-name, strong, b') || a;
+    const name = nameEl.textContent.trim().split('\n')[0].trim();
+    const ovrMatch = a.textContent.match(/(\d{2,3})/);
+    const ovr = ovrMatch ? parseInt(ovrMatch[1]) : 100;
+    if (name && name.length > 1) items.push({name, pid, imgId, ovr, pos:'?', season:'?'});
+  });
+  return items;
+}
+
+// Fallback: dùng Claude AI khi proxy chưa deploy
+async function searchViaAI(q) {
+  const list = document.getElementById('playerList');
+  try {
+    const res = await fetch('https://api.anthropic.com/v1/messages', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({
+        model:'claude-sonnet-4-6', max_tokens:1000,
+        messages:[{role:'user',content:`Tìm cầu thủ "${q}" FC Online FO4. Trả JSON array tối đa 8 kết quả: name, season (26TOTS/26TYN/WS/MDL/25UCL/26TY/PTG/CU/LH...), pos, ovr(số), pace, shooting, passing, dribbling, defending, physical, imgId(phần ID trong URL ảnh fifaaddict dạng s1.fifaaddict.com/fo4/players/IMGID.png, chữ thường), club, hiddenStats(array 2-3 tên tiếng Việt). Chỉ JSON array.`}]
+      })
+    });
+    const d = await res.json();
+    allResults = JSON.parse(d.content[0].text.replace(/```json|```/g,'').trim());
+    renderResults();
+  } catch(e) {
+    list.innerHTML = `<div class="empty"><div class="ic">❌</div>Không tìm được. Kiểm tra kết nối!</div>`;
+  }
+}
+
+// ─────────────────────────────────────────────
+// RENDER SEARCH RESULTS
+// ─────────────────────────────────────────────
+function renderResults() {
+  const list = document.getElementById('playerList');
+  let items = allResults;
+
+  // Lọc theo vị trí
+  if (posFilter) items = items.filter(p => (p.pos||'').toUpperCase().includes(posFilter));
+
+  if (!items.length) {
+    list.innerHTML = `<div class="empty"><div class="ic">🔍</div>Không có kết quả${posFilter?' cho vị trí '+posFilter:''}</div>`;
+    return;
+  }
+
+  list.innerHTML = '';
+  items.forEach(p => {
+    const card = document.createElement('div');
+    card.className = 'pcard';
+    card.draggable = true;
+    const init = p.name.split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase();
+    const url  = p.imgId ? imgUrl(p.imgId) : null;
+
+    card.innerHTML = `
+      <div class="pcard-img">${url ? `<img src="${url}" onerror="this.style.display='none'" alt="">` : init}</div>
+      <div class="pcard-info">
+        <div class="pcard-name">${p.name}</div>
+        <div class="pcard-meta">
+          <span class="badge">${p.season||'?'}</span>
+          <span class="pcard-sub">${p.pos||'?'} · ${p.club||''}</span>
+        </div>
+      </div>
+      <div class="pcard-ovr">${p.ovr}</div>`;
+
+    card.ondragstart = () => { draggedPlayer = {...p,init}; card.classList.add('dragging'); };
+    card.ondragend   = () => card.classList.remove('dragging');
+
+    card.onclick = () => {
+      if (selectedSlot !== null) {
+        players[selectedSlot] = {...p, init};
+        renderPitch();
+        showDetail(selectedSlot);
+        updateChem();
+        showToast(`✅ ${p.name} → ô ${FORMATIONS[formation][selectedSlot].pos}`);
+      } else {
+        showToast('👆 Click vị trí trên sân trước!');
+      }
+    };
+
+    list.appendChild(card);
+  });
+}
+
+// ─────────────────────────────────────────────
+// DETAIL PANEL
+// ─────────────────────────────────────────────
+function showDetail(i) {
+  const p = players[i];
+  if (!p) return;
+  rTab('detail');
+
+  const url = p.imgId ? imgUrl(p.imgId) : null;
+  const init = (p.init || p.name.split(' ').map(w=>w[0]).join('').slice(0,2)).toUpperCase();
+
+  const stats = [
+    {l:'Tốc độ',   v: p.pace      || 132},
+    {l:'Sút',      v: p.shooting  || 130},
+    {l:'Chuyền',   v: p.passing   || 126},
+    {l:'Rê bóng',  v: p.dribbling || 130},
+    {l:'Phòng thủ',v: p.defending || 82},
+    {l:'Thể lực',  v: p.physical  || 124},
+  ];
+
+  const hidden = p.hiddenStats || getHidden(p.name);
+
+  document.getElementById('rpanel').innerHTML = `
+    <div class="detail-card">
+      <div class="detail-head">
+        <div class="detail-avatar">
+          ${url ? `<img src="${url}" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'" alt="${p.name}"><span style="display:none;font-family:'Rajdhani',sans-serif;font-weight:700;font-size:16px;color:#fff;align-items:center;justify-content:center;width:100%;height:100%">${init}</span>` : `<span>${init}</span>`}
+        </div>
+        <div style="flex:1;min-width:0">
+          <div class="detail-name">${p.name}</div>
+          <div class="detail-sub"><span class="badge">${p.season||'?'}</span> ${p.pos||'?'} · OVR <strong style="color:var(--accent)">${p.ovr}</strong></div>
+        </div>
+        <button class="remove-btn" onclick="removePlayer(${i})">✕ Xóa</button>
+      </div>
+      ${stats.map(s=>`
+        <div class="stat-row">
+          <div class="stat-head"><span>${s.l}</span><span>${s.v}</span></div>
+          <div class="stat-bar"><div class="stat-fill" style="width:${Math.min(100,s.v/145*100)}%"></div></div>
+        </div>`).join('')}
+    </div>
+    <div class="sec">Chỉ số ẩn</div>
+    <div style="margin-bottom:12px">${hidden.map(h=>`<span class="tag g">${h}</span>`).join('')}</div>
+    <div class="sec">Phù hợp chiến thuật</div>
+    <div>
+      <span class="tag g">Tiki-Taka</span>
+      <span class="tag g">Ban bật ngắn</span>
+      ${(p.pace||132)>135?'<span class="tag g">Phản công</span>':''}
+      ${'ST CF'.includes(p.pos||'')?'<span class="tag y">Pressing cao</span>':''}
+    </div>`;
+}
+
+function removePlayer(i) {
+  delete players[i];
+  renderPitch();
+  updateChem();
+  document.getElementById('rpanel').innerHTML = `<div class="empty"><div class="ic">👆</div>Click cầu thủ trên sân để xem chi tiết</div>`;
+}
+
+function getHidden(name) {
+  const map = {
+    'L. Messi':['Não game','Chuyên gia vô lê','Sút xoáy'],
+    'L. Suárez':['Bậc thầy chạy chỗ','Đánh đầu mạnh','Sút má ngoài'],
+    'Lamine Yamal':['Qua người','Sút xoáy','Kiến tạo'],
+    'Raphinha':['Sút xoáy','Bậc thầy chạy chỗ','Sút xa'],
+    'Pedri':['Kiến tạo','Ban bật','Não game'],
+    'F. de Jong':['Tranh cướp','Kiến tạo','Box-to-box'],
+    'J. Alvarez':['Chuyên gia vô lê','Kiến tạo','Sút xa'],
+  };
+  return map[name] || ['Kiến tạo','Ban bật'];
+}
+
+// ─────────────────────────────────────────────
+// AI ANALYSIS
+// ─────────────────────────────────────────────
+async function analyzeAI() {
+  rTab('ai');
+  const pList = Object.values(players);
+  if (pList.length < 5) {
+    document.getElementById('rpanel').innerHTML = `<div class="empty"><div class="ic">⚠️</div>Cần ít nhất 5 cầu thủ trên sân</div>`;
+    return;
+  }
+  document.getElementById('rpanel').innerHTML = `<div class="empty"><div class="spinner"></div><div style="margin-top:12px;font-size:11px">🤖 AI đang phân tích đội hình...</div></div>`;
+
+  const str = pList.map(p=>`${p.name}(${p.season||'?'},${p.pos||'?'},OVR${p.ovr})`).join(', ');
+  try {
+    const res = await fetch('https://api.anthropic.com/v1/messages',{
+      method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({
+        model:'claude-sonnet-4-6',max_tokens:1000,
+        messages:[{role:'user',content:`Phân tích đội FC Online sơ đồ ${formation}: ${str}. JSON: strengths(array 3 điểm mạnh ngắn tiếng Việt), weaknesses(array 2 điểm yếu), tactics(string 2-3 câu chiến thuật), improvements(array 2 gợi ý). Chỉ JSON.`}]
+      })
+    });
+    const d = await res.json();
+    const r = JSON.parse(d.content[0].text.replace(/```json|```/g,'').trim());
+    document.getElementById('rpanel').innerHTML = `
+      <div class="ai-box"><h4>✅ Điểm mạnh</h4><ul>${r.strengths.map(s=>`<li>${s}</li>`).join('')}</ul></div>
+      <div class="ai-box"><h4>⚠️ Điểm yếu</h4><ul>${r.weaknesses.map(w=>`<li>${w}</li>`).join('')}</ul></div>
+      <div class="ai-box"><h4>🎮 Chiến thuật</h4><p>${r.tactics}</p></div>
+      <div class="ai-box"><h4>💡 Gợi ý cải thiện</h4><ul>${r.improvements.map(i=>`<li>${i}</li>`).join('')}</ul></div>`;
+  } catch(e) {
+    document.getElementById('rpanel').innerHTML = `<div class="empty"><div class="ic">❌</div>Lỗi phân tích. Thử lại!</div>`;
+  }
+}
+
+// ─────────────────────────────────────────────
+// CHEMISTRY
+// ─────────────────────────────────────────────
+function updateChem() {
+  const n = Object.keys(players).length;
+  const c = Math.min(300, Math.round(n / 11 * 300));
+  document.getElementById('chemVal').textContent = c + '/300';
+  // Update chem tab nếu đang mở
+  if (currentTab === 'chem') renderChemTab();
+}
+
+function renderChemTab() {
+  const n = Object.keys(players).length;
+  const c = Math.min(300, Math.round(n / 11 * 300));
+  document.getElementById('rpanel').innerHTML = `
+    <div class="chem-big">
+      <div class="chem-n">${c}</div>
+      <div class="chem-lbl">/ 300 Chemistry</div>
+      <div class="chem-bar2"><div class="chem-fill2" style="width:${c/3}%"></div></div>
+    </div>
+    <div class="sec">Team Color</div>
+    <div class="ai-box">
+      <p>💙❤️ <strong>Barcelona</strong>: ${n}/11 cầu thủ<br>
+      ${c>=300?'✅ Chemistry tối đa! Buff đầy đủ':'⚠️ Chưa đủ 11 cầu thủ'}<br>
+      ⚡ Buff: +5 Dứt điểm · +5 Chuyền ngắn · +5 Tăng tốc · +5 Thể lực</p>
+    </div>
+    <div class="sec">Thống kê đội hình</div>
+    <div class="ai-box">
+      <p>📊 Cầu thủ trên sân: <strong style="color:var(--accent)">${n}/11</strong><br>
+      ⭐ OVR trung bình: <strong style="color:var(--accent)">${n?Math.round(Object.values(players).reduce((a,p)=>a+p.ovr,0)/n):0}</strong><br>
+      🏆 OVR cao nhất: <strong style="color:var(--accent)">${n?Math.max(...Object.values(players).map(p=>p.ovr)):0}</strong></p>
+    </div>`;
+}
+
+// ─────────────────────────────────────────────
+// UTILS
+// ─────────────────────────────────────────────
+function rTab(tab) {
+  currentTab = tab;
+  document.querySelectorAll('.rtab').forEach((t,i)=>t.classList.toggle('active',['detail','chem','ai'][i]===tab));
+  if (tab==='chem') renderChemTab();
+  else if (tab==='ai') analyzeAI();
+}
+
+function changeFormation() {
+  formation = document.getElementById('formSel').value;
+  players = {};
+  selectedSlot = null;
+  renderPitch();
+}
+
+function clearPitch() {
+  if (!confirm('Xóa toàn bộ đội hình?')) return;
+  players = {}; selectedSlot = null; renderPitch();
+  document.getElementById('rpanel').innerHTML = `<div class="empty"><div class="ic">👆</div>Click cầu thủ trên sân để xem chi tiết</div>`;
+  showToast('🗑 Đã xóa đội hình');
+}
+
+function shareTeam() {
+  localStorage.setItem('fco3', JSON.stringify({f:formation,p:players}));
+  try {
+    const enc = btoa(encodeURIComponent(JSON.stringify({f:formation,p:players})));
+    const url = location.origin + location.pathname + '?t=' + enc;
+    navigator.clipboard.writeText(url).then(()=>showToast('🔗 Đã copy link! Paste cho bạn bè'));
+  } catch(e) { showToast('💾 Đã lưu đội hình!'); }
+}
+
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'), 2500);
+}
+</script>
+</body>
+</html>
